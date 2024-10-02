@@ -1,0 +1,37 @@
+name: Setup Ngrok on Windows
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  setup-ngrok:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Download Ngrok
+      run: |
+        Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
+        Expand-Archive -Path "ngrok.zip" -DestinationPath "$env:USERPROFILE\ngrok"
+        Remove-Item -Path "ngrok.zip"
+
+    - name: Add Ngrok to PATH
+      run: |
+        $env:PATH += ";$env:USERPROFILE\ngrok"
+
+    - name: Authenticate Ngrok
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        & "$env:USERPROFILE\ngrok\ngrok.exe" authtoken $env:NGROK_AUTH_TOKEN
+
+    - name: Start Ngrok Tunnel
+      run: |
+        Start-Process -FilePath "$env:USERPROFILE\ngrok\ngrok.exe" -ArgumentList "http 80" -NoNewWindow
