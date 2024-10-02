@@ -1,15 +1,13 @@
-name: Setup Ngrok on Windows
+# GitHub Actions workflow YAML configuration to set up Ngrok for RDP access on a Windows machine
+
+workflow_yaml = '''
+name: Setup Ngrok for RDP on Windows
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  setup-ngrok:
+  setup-ngrok-rdp:
     runs-on: windows-latest
 
     steps:
@@ -19,19 +17,45 @@ jobs:
     - name: Download Ngrok
       run: |
         Invoke-WebRequest -Uri "https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-        Expand-Archive -Path "ngrok.zip" -DestinationPath "$env:USERPROFILE\ngrok"
+        Expand-Archive -Path "ngrok.zip" -DestinationPath "$env:USERPROFILE\
+grok"
         Remove-Item -Path "ngrok.zip"
 
     - name: Add Ngrok to PATH
       run: |
-        $env:PATH += ";$env:USERPROFILE\ngrok"
+        $env:PATH += ";$env:USERPROFILE\
+grok"
 
     - name: Authenticate Ngrok
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
       run: |
-        & "$env:USERPROFILE\ngrok\ngrok.exe" authtoken $env:NGROK_AUTH_TOKEN
+        & "$env:USERPROFILE\
+grok\
+grok.exe" authtoken $env:NGROK_AUTH_TOKEN
 
-    - name: Start Ngrok Tunnel
+    - name: Enable RDP
       run: |
-        Start-Process -FilePath "$env:USERPROFILE\ngrok\ngrok.exe" -ArgumentList "http 80" -NoNewWindow
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Create RDP User
+      run: |
+        net user Ankletee Pa$$word /add
+        net localgroup administrators Ankletee /add
+
+    - name: Start Ngrok Tunnel for RDP
+      run: |
+        Start-Process -FilePath "$env:USERPROFILE\
+grok\
+grok.exe" -ArgumentList "tcp 3389" -NoNewWindow
+
+    - name: Display Ngrok URL
+      run: |
+        Start-Sleep -Seconds 10
+        & "$env:USERPROFILE\
+grok\
+grok.exe" tcp 3389 --log=stdout | Select-String -Pattern "tcp://" | ForEach-Object { $_.Matches.Groups[0].Value }
+'''
+
+print(workflow_yaml)
